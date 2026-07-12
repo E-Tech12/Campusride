@@ -4,6 +4,7 @@ import api from "../../services/api"
 import Input from "../../components/Input"
 import Button from "../../components/Button"
 import Card from "../../components/Card"
+import PublicLayout from "../../components/PublicLayout"
 
 export default function ResetPassword() {
   const location = useLocation()
@@ -38,8 +39,9 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-16">
-      <h1 className="font-display font-bold text-3xl mb-2">Reset password</h1>
+    <PublicLayout>
+    <div className="max-w-md mx-auto px-4 py-16">
+      <h1 className="font-display font-bold text-3xl mb-2 text-white">Reset password</h1>
       <p className="text-mist mb-8">Enter the code from your email and a new password.</p>
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -59,5 +61,6 @@ export default function ResetPassword() {
         </form>
       </Card>
     </div>
+    </PublicLayout>
   )
 }

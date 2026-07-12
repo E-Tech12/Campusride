@@ -92,10 +92,10 @@ export default function DriverEarnings() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
-      <h1 className="mb-8 text-3xl font-display font-bold text-white">Earnings & Wallet</h1>
+    <div className="mx-auto max-w-5xl p-4 sm:p-6">
+      <h1 className="mb-6 sm:mb-8 text-2xl sm:text-3xl font-display font-bold text-white">Earnings & Wallet</h1>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid gap-3 sm:grid-cols-3 sm:gap-4">
         <div className="rounded-card border border-ink-800 bg-ink-900 p-4 shadow-glass">
           <p className="text-xs uppercase text-mist">Today's Earnings</p>
           <p className="mt-1 text-2xl font-bold text-white">₦{data.today_earnings.toLocaleString()}</p>
@@ -139,41 +139,62 @@ export default function DriverEarnings() {
         </div>
       </div>
 
-      <div className="mt-8 rounded-card border border-ink-800 bg-ink-900 p-6 shadow-glass">
+      <div className="mt-8 rounded-card border border-ink-800 bg-ink-900 p-4 sm:p-6 shadow-glass">
         <h3 className="mb-4 text-lg font-semibold text-white">Recent Transactions</h3>
         {data.recent_transactions.length === 0 ? (
           <p className="py-8 text-center text-mist">No transactions yet</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-mist">
-              <thead className="border-b border-ink-800 text-xs uppercase">
-                <tr>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Description</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recent_transactions.map((t) => (
-                  <tr key={t.id} className="border-b border-ink-800/50 hover:bg-ink-800/20">
-                    <td className="px-4 py-3">{t.created_at ? new Date(t.created_at).toLocaleDateString() : '-'}</td>
-                    <td className="px-4 py-3">{t.description || TYPE_LABELS[t.type] || t.type}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded bg-brand/10 px-2 py-1 text-brand">{TYPE_LABELS[t.type] || t.type}</span>
-                    </td>
-                    <td className={`px-4 py-3 ${t.amount < 0 ? 'text-coral' : 'text-success'}`}>
+          <>
+            {/* Card list on mobile */}
+            <div className="space-y-2 sm:hidden">
+              {data.recent_transactions.map((t) => (
+                <div key={t.id} className="rounded-xl border border-ink-800/60 bg-ink-950/40 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-white font-medium truncate">{t.description || TYPE_LABELS[t.type] || t.type}</span>
+                    <span className={`shrink-0 font-semibold text-sm ${t.amount < 0 ? 'text-coral' : 'text-success'}`}>
                       {t.amount < 0 ? '-' : '+'} ₦{Math.abs(t.amount).toLocaleString()}
-                    </td>
-                    <td className={`px-4 py-3 ${STATUS_STYLES[t.status] || 'text-mist'}`}>
-                      {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
-                    </td>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <span className="text-xs text-mist">{t.created_at ? new Date(t.created_at).toLocaleDateString() : '-'}</span>
+                    <span className={`text-xs ${STATUS_STYLES[t.status] || 'text-mist'}`}>{t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Table on larger screens */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-sm text-mist">
+                <thead className="border-b border-ink-800 text-xs uppercase">
+                  <tr>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Description</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Amount</th>
+                    <th className="px-4 py-3">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {data.recent_transactions.map((t) => (
+                    <tr key={t.id} className="border-b border-ink-800/50 hover:bg-ink-800/20">
+                      <td className="px-4 py-3">{t.created_at ? new Date(t.created_at).toLocaleDateString() : '-'}</td>
+                      <td className="px-4 py-3">{t.description || TYPE_LABELS[t.type] || t.type}</td>
+                      <td className="px-4 py-3">
+                        <span className="rounded bg-brand/10 px-2 py-1 text-brand">{TYPE_LABELS[t.type] || t.type}</span>
+                      </td>
+                      <td className={`px-4 py-3 ${t.amount < 0 ? 'text-coral' : 'text-success'}`}>
+                        {t.amount < 0 ? '-' : '+'} ₦{Math.abs(t.amount).toLocaleString()}
+                      </td>
+                      <td className={`px-4 py-3 ${STATUS_STYLES[t.status] || 'text-mist'}`}>
+                        {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

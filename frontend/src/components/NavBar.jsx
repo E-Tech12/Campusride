@@ -85,30 +85,23 @@ export default function NavBar() {
 
       {open && (
         <div className="md:hidden border-t border-ink-700 px-4 py-3 space-y-1 bg-ink-950">
-          {links.map((l) => {
-            const Icon = l.icon
-            return (
-              <Link
-                key={l.to}
-                to={l.to}
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-mist hover:bg-ink-800 hover:text-white"
-              >
-                <Icon size={16} /> {l.label}
-              </Link>
-            )
-          })}
+          {/* Primary section links live in the bottom tab bar on mobile; this
+              drawer only surfaces account-level actions to avoid duplicating
+              the same nav in two places. */}
           {user ? (
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-coral hover:bg-ink-800"
-            >
-              <LogOut size={16} /> Log out
-            </button>
+            <>
+              <div className="px-3 py-2 text-sm text-mist">Signed in as <span className="text-white font-medium">{user.full_name}</span></div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-coral hover:bg-ink-800"
+              >
+                <LogOut size={16} /> Log out
+              </button>
+            </>
           ) : (
             <div className="flex gap-2 pt-2">
-              <Link to="/login" onClick={() => setOpen(false)} className="flex-1 text-center py-2 rounded-lg border border-ink-600 text-sm">Log in</Link>
-              <Link to="/register" onClick={() => setOpen(false)} className="flex-1 text-center py-2 rounded-lg bg-signal text-ink-950 text-sm font-semibold">Sign up</Link>
+              <Link to="/login" onClick={() => setOpen(false)} className="flex-1 text-center py-2.5 rounded-lg border border-ink-600 text-sm">Log in</Link>
+              <Link to="/register" onClick={() => setOpen(false)} className="flex-1 text-center py-2.5 rounded-lg bg-signal text-ink-950 text-sm font-semibold">Sign up</Link>
             </div>
           )}
         </div>

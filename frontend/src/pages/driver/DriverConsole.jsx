@@ -5,9 +5,10 @@ import { getSocket } from "../../services/socket"
 import { useGeolocation } from "../../hooks/useGeolocation"
 import Card from "../../components/Card"
 import Button from "../../components/Button"
+import Skeleton from "../../components/ui/Skeleton"
 import SeatBoard from "../../components/SeatBoard"
 import StatusBadge from "../../components/StatusBadge"
-import { Power, MapPin, Route as RouteIcon } from "lucide-react"
+import { Power, MapPin, Route as RouteIcon, Wallet, TrendingUp, Clock3 } from "lucide-react"
 
 export default function DriverConsole() {
   const navigate = useNavigate()
@@ -15,18 +16,21 @@ export default function DriverConsole() {
   const [driver, setDriver] = useState(null)
   const [routes, setRoutes] = useState([])
   const [requests, setRequests] = useState([])
+  const [earnings, setEarnings] = useState(null)
   const [toggling, setToggling] = useState(false)
   const [error, setError] = useState("")
 
   const refresh = useCallback(async () => {
-    const [driverRes, routesRes, requestsRes] = await Promise.all([
+    const [driverRes, routesRes, requestsRes, earningsRes] = await Promise.all([
       api.get("/driver/me"),
       api.get("/driver/routes"),
       api.get("/driver/requests"),
+      api.get("/driver/earnings"),
     ])
     setDriver(driverRes.data)
     setRoutes(routesRes.data)
     setRequests(requestsRes.data)
+    setEarnings(earningsRes.data)
   }, [])
 
   useEffect(() => { refresh() }, [refresh])
@@ -94,7 +98,25 @@ export default function DriverConsole() {
     refresh()
   }
 
-  if (!driver) return null
+  if (!driver) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-10 w-full sm:w-32 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+        </div>
+        <Skeleton className="h-24 rounded-card" />
+      </div>
+    )
+  }
 
   const pending = requests.filter((r) => r.status === "pending")
   const active = requests.filter((r) => ["accepted", "ongoing"].includes(r.status))
@@ -102,7 +124,7 @@ export default function DriverConsole() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display font-bold text-2xl">Driver console</h1>
           <p className="text-mist text-sm">{driver.vehicle_color} {driver.vehicle_make} {driver.vehicle_model} · {driver.plate_number}</p>
@@ -111,13 +133,21 @@ export default function DriverConsole() {
           variant={driver.is_online ? "danger" : "primary"}
           onClick={handleToggle}
           loading={toggling}
-          className="gap-2"
+          className="gap-2 w-full sm:w-auto"
         >
           <Power size={16} /> {driver.is_online ? "Go offline" : "Go online"}
         </Button>
       </div>
 
       {error && <p className="text-sm text-coral mb-4">{error}</p>}
+
+      {earnings && (
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <StatTile icon={Wallet} label="Today" value={`₦${earnings.today_earnings.toLocaleString()}`} />
+          <StatTile icon={TrendingUp} label="Rides today" value={earnings.today_rides} />
+          <StatTile icon={Clock3} label="Pending payout" value={earnings.pending_withdrawals} />
+        </div>
+      )}
 
       <Card className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <SeatBoard capacity={driver.seat_capacity} available={driver.seats_available} />
@@ -132,9 +162,12 @@ export default function DriverConsole() {
       {pending.length > 0 && (
         <Section title="Incoming requests">
           {pending.map((r) => (
-            <Card key={r.id} className="flex items-center justify-between flex-wrap gap-3">
+            <Card key={r.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <div className="font-medium text-sm">{r.student_name}</div>
+                <div className="flex items-center justify-between gap-2 sm:block">
+                  <div className="font-medium text-sm">{r.student_name}</div>
+                  <span className="font-mono-num text-sm text-signal sm:hidden">₦{r.price}</span>
+                </div>
                 <div className="text-xs text-mist flex items-center gap-1"><MapPin size={12} /> Destination: {r.zone?.name}</div>
                 {(r.distance_km != null || r.eta_minutes != null) && (
                   <div className="text-xs text-mist mt-0.5">
@@ -145,9 +178,9 @@ export default function DriverConsole() {
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-mono-num text-sm text-signal">₦{r.price}</span>
-                <Button variant="outline" className="px-3 py-1.5 text-xs" onClick={() => handleRespond(r.id, "reject")}>Decline</Button>
-                <Button className="px-3 py-1.5 text-xs" onClick={() => handleRespond(r.id, "accept")}>Accept</Button>
+                <span className="hidden sm:inline font-mono-num text-sm text-signal">₦{r.price}</span>
+                <Button variant="outline" className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs" onClick={() => handleRespond(r.id, "reject")}>Decline</Button>
+                <Button className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs" onClick={() => handleRespond(r.id, "accept")}>Accept</Button>
               </div>
             </Card>
           ))}
@@ -193,6 +226,16 @@ export default function DriverConsole() {
       {!pending.length && !active.length && !history.length && (
         <Card className="text-center text-mist py-10">No requests yet. Go online to start receiving them.</Card>
       )}
+    </div>
+  )
+}
+
+function StatTile({ icon: Icon, label, value }) {
+  return (
+    <div className="rounded-xl border border-ink-800 bg-ink-900 p-3">
+      <Icon size={14} className="text-mist mb-1.5" />
+      <div className="font-display font-bold text-lg text-white leading-tight truncate">{value}</div>
+      <div className="text-[10px] text-mist uppercase tracking-wide">{label}</div>
     </div>
   )
 }

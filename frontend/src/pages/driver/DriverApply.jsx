@@ -77,7 +77,7 @@ export default function DriverApply() {
 
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Make" value={form.vehicle_make} onChange={handleChange("vehicle_make")} required placeholder="Toyota" />
             <Input label="Model" value={form.vehicle_model} onChange={handleChange("vehicle_model")} required placeholder="Sienna" />
           </div>

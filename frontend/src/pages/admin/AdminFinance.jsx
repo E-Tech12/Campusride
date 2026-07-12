@@ -65,7 +65,7 @@ export default function AdminFinance() {
   const pieTotal = pieData[0].value + pieData[1].value || 1;
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6">
       <h1 className="mb-8 text-3xl font-display font-bold text-white">Financial Dashboard</h1>
 
       <div className="mb-8 grid gap-6 md:grid-cols-3">
@@ -152,7 +152,43 @@ export default function AdminFinance() {
         {withdrawals.length === 0 ? (
           <p className="py-8 text-center text-mist">No pending withdrawal requests</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            {/* Card list on mobile -- a 5-column table doesn't work with a thumb */}
+            <div className="space-y-3 sm:hidden">
+              {withdrawals.map((w) => (
+                <div key={w.id} className="rounded-xl border border-ink-800/50 bg-ink-950/50 p-4">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-white font-medium text-sm truncate">{w.driver_name || `Driver #${w.driver_id}`}</span>
+                    <span className="font-mono text-signal font-bold text-sm shrink-0">₦{w.amount.toLocaleString()}</span>
+                  </div>
+                  <div className="text-xs text-mist mb-1">
+                    {w.account_number ? `${w.account_number} (${w.bank_code || ''})` : 'No account on file'}
+                  </div>
+                  <div className="text-xs text-mist mb-3">
+                    Requested {w.created_at ? new Date(w.created_at).toLocaleDateString() : '—'}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      disabled={actioning === w.id}
+                      onClick={() => handleAction(w.id, 'approve')}
+                      className="flex-1 rounded-lg bg-success/10 px-3 py-2 text-xs font-semibold text-success hover:bg-success/20 disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      disabled={actioning === w.id}
+                      onClick={() => handleAction(w.id, 'reject')}
+                      className="flex-1 rounded-lg bg-coral/10 px-3 py-2 text-xs font-semibold text-coral hover:bg-coral/20 disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Table on larger screens */}
+            <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-sm text-mist">
               <thead className="border-b border-ink-800 text-xs uppercase">
                 <tr>
@@ -192,7 +228,8 @@ export default function AdminFinance() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>

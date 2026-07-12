@@ -39,12 +39,12 @@ export function AuthProvider({ children }) {
     return () => disconnectSocket()
   }, [user?.id])
 
-  const login = (userData, token) => {
+  const login = (token, userData) => {
     localStorage.setItem("cr_token", token)
     localStorage.setItem("cr_user", JSON.stringify(userData))
     setUser(userData)
   }
-  
+
   const logout = () => {
     localStorage.removeItem("cr_token")
     localStorage.removeItem("cr_user")

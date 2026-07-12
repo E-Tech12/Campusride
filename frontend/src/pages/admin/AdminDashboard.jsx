@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import api from "../../services/api"
+import Skeleton from "../../components/ui/Skeleton"
 import { Users, Car, MapPinned, TrendingUp, Search } from "lucide-react"
 
 export default function AdminDashboard() {
@@ -54,11 +55,19 @@ export default function AdminDashboard() {
   })
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-      <h1 className="font-display font-bold text-3xl mb-8 text-white">System Operations</h1>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <h1 className="font-display font-bold text-2xl sm:text-3xl mb-6 sm:mb-8 text-white">System Operations</h1>
+
+      {!stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-[104px] rounded-card" />
+          ))}
+        </div>
+      )}
 
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <StatCard 
             icon={Users} 
             label="Total Students" 
@@ -124,15 +133,15 @@ export default function AdminDashboard() {
 
       <div className="rounded-card border border-ink-800 bg-ink-900 shadow-glass overflow-hidden">
         {tab === "drivers" && (
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
                <h2 className="text-xl font-display font-semibold text-white">Driver Management</h2>
-               <div className="flex gap-2">
+               <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:mx-0 sm:px-0 sm:pb-0">
                  {["all", "pending", "approved", "online"].map(f => (
                    <button 
                      key={f} 
                      onClick={() => setDriverFilter(f)}
-                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${driverFilter === f ? 'bg-signal text-ink-950' : 'bg-ink-800 text-mist hover:text-white'}`}
+                     className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${driverFilter === f ? 'bg-signal text-ink-950' : 'bg-ink-800 text-mist hover:text-white'}`}
                    >
                      {f.charAt(0).toUpperCase() + f.slice(1)}
                      {f === "pending" && drivers.filter(d=>d.status==="pending").length > 0 && 
@@ -150,10 +159,10 @@ export default function AdminDashboard() {
                 <div className="text-center py-8 text-mist text-sm">No drivers found for this filter.</div>
               ) : (
                 filteredDrivers.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between bg-ink-950/50 p-4 rounded-xl border border-ink-800/50 hover:border-ink-700 transition-colors">
-                    <div>
+                  <div key={d.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-ink-950/50 p-4 rounded-xl border border-ink-800/50 hover:border-ink-700 transition-colors">
+                    <div className="min-w-0">
                       <div className="font-medium text-white text-sm mb-1">{d.full_name}</div>
-                      <div className="text-xs text-mist font-mono">
+                      <div className="text-xs text-mist font-mono break-words">
                         {d.vehicle_color} {d.vehicle_make} {d.vehicle_model} · {d.plate_number} · {d.seat_capacity} seats
                       </div>
                       <div className="text-xs text-mist font-mono mt-1">License: {d.license_number}</div>
@@ -161,11 +170,11 @@ export default function AdminDashboard() {
                     
                     {d.status === "pending" ? (
                       <div className="flex gap-2">
-                        <button className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-coral text-coral hover:bg-coral/10" onClick={() => handleReject(d.id)}>Reject</button>
-                        <button className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-signal text-ink-950 hover:bg-signal-dim" onClick={() => handleApprove(d.id)}>Approve</button>
+                        <button className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-lg border border-coral text-coral hover:bg-coral/10" onClick={() => handleReject(d.id)}>Reject</button>
+                        <button className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-lg bg-signal text-ink-950 hover:bg-signal-dim" onClick={() => handleApprove(d.id)}>Approve</button>
                       </div>
                     ) : (
-                      <span className={`px-2.5 py-1 text-xs font-medium rounded-md ${d.status === 'approved' ? 'bg-success/10 text-success' : 'bg-coral/10 text-coral'}`}>
+                      <span className={`self-start sm:self-auto px-2.5 py-1 text-xs font-medium rounded-md ${d.status === 'approved' ? 'bg-success/10 text-success' : 'bg-coral/10 text-coral'}`}>
                         {d.status.toUpperCase()}
                       </span>
                     )}
@@ -177,37 +186,58 @@ export default function AdminDashboard() {
         )}
 
         {tab === "students" && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <h2 className="text-xl font-display font-semibold text-white mb-6">Registered Students</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-mist">
-                <thead className="border-b border-ink-800 text-xs uppercase bg-ink-950/50">
-                  <tr>
-                    <th className="px-4 py-3">Full Name</th>
-                    <th className="px-4 py-3">Email</th>
-                    <th className="px-4 py-3">Student ID</th>
-                    <th className="px-4 py-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((s) => (
-                    <tr key={s.id} className="border-b border-ink-800/50 hover:bg-ink-800/30 transition-colors">
-                      <td className="px-4 py-3 text-white font-medium">{s.full_name}</td>
-                      <td className="px-4 py-3">{s.email}</td>
-                      <td className="px-4 py-3 font-mono">{s.student_id || "N/A"}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-[10px] uppercase font-bold rounded ${s.is_verified ? 'bg-success/10 text-success' : 'bg-coral/10 text-coral'}`}>
-                          {s.is_verified ? 'Verified' : 'Unverified'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {students.length === 0 && (
-                    <tr><td colSpan="4" className="text-center py-6 text-mist">No students found.</td></tr>
-                  )}
-                </tbody>
-              </table>
+
+            {students.length === 0 && (
+              <div className="text-center py-6 text-mist text-sm">No students found.</div>
+            )}
+
+            {/* Card list on mobile -- horizontal-scroll tables are hard to use with a thumb */}
+            <div className="space-y-2 sm:hidden">
+              {students.map((s) => (
+                <div key={s.id} className="bg-ink-950/50 p-3 rounded-xl border border-ink-800/50">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-white font-medium text-sm truncate">{s.full_name}</span>
+                    <span className={`shrink-0 px-2 py-0.5 text-[10px] uppercase font-bold rounded ${s.is_verified ? 'bg-success/10 text-success' : 'bg-coral/10 text-coral'}`}>
+                      {s.is_verified ? 'Verified' : 'Unverified'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-mist truncate">{s.email}</div>
+                  <div className="text-xs text-mist font-mono mt-0.5">{s.student_id || "No student ID"}</div>
+                </div>
+              ))}
             </div>
+
+            {/* Table on larger screens */}
+            {students.length > 0 && (
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-left text-sm text-mist">
+                  <thead className="border-b border-ink-800 text-xs uppercase bg-ink-950/50">
+                    <tr>
+                      <th className="px-4 py-3">Full Name</th>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">Student ID</th>
+                      <th className="px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map((s) => (
+                      <tr key={s.id} className="border-b border-ink-800/50 hover:bg-ink-800/30 transition-colors">
+                        <td className="px-4 py-3 text-white font-medium">{s.full_name}</td>
+                        <td className="px-4 py-3">{s.email}</td>
+                        <td className="px-4 py-3 font-mono">{s.student_id || "N/A"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 text-[10px] uppercase font-bold rounded ${s.is_verified ? 'bg-success/10 text-success' : 'bg-coral/10 text-coral'}`}>
+                            {s.is_verified ? 'Verified' : 'Unverified'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -252,14 +282,14 @@ function StatCard({ icon: Icon, label, value, active, onClick }) {
   return (
     <div 
       onClick={onClick}
-      className={`relative p-5 rounded-card border transition-all cursor-pointer overflow-hidden ${
+      className={`relative p-4 sm:p-5 rounded-card border transition-all cursor-pointer overflow-hidden ${
         active ? "border-signal bg-signal/5 shadow-[0_0_15px_rgba(0,229,255,0.15)]" : "border-ink-800 bg-ink-900 hover:border-ink-700"
       }`}
     >
       {active && <div className="absolute top-0 left-0 w-full h-1 bg-signal" />}
-      <Icon size={20} className={`mb-3 ${active ? "text-signal" : "text-mist"}`} />
-      <div className="font-display font-bold text-3xl text-white tracking-tight">{value}</div>
-      <div className="text-xs text-mist font-medium mt-1">{label}</div>
+      <Icon size={18} className={`mb-2 sm:mb-3 ${active ? "text-signal" : "text-mist"}`} />
+      <div className="font-display font-bold text-2xl sm:text-3xl text-white tracking-tight truncate">{value}</div>
+      <div className="text-[11px] sm:text-xs text-mist font-medium mt-1">{label}</div>
     </div>
   )
 }

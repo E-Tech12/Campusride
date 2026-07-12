@@ -4,6 +4,7 @@ import api from "../../services/api"
 import Input from "../../components/Input"
 import Button from "../../components/Button"
 import Card from "../../components/Card"
+import PublicLayout from "../../components/PublicLayout"
 
 export default function ForgotPassword() {
   const navigate = useNavigate()
@@ -24,16 +25,18 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-16">
-      <h1 className="font-display font-bold text-3xl mb-2">Forgot password</h1>
-      <p className="text-mist mb-8">We'll email you a reset code.</p>
-      <Card>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          {info && <p className="text-sm text-signal">{info}</p>}
-          <Button type="submit" loading={loading} className="w-full">Send reset code</Button>
-        </form>
-      </Card>
-    </div>
+    <PublicLayout>
+      <div className="max-w-md mx-auto px-4 py-16">
+        <h1 className="font-display font-bold text-3xl mb-2 text-white">Forgot password</h1>
+        <p className="text-mist mb-8">We'll email you a reset code.</p>
+        <Card>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            {info && <p className="text-sm text-signal">{info}</p>}
+            <Button type="submit" loading={loading} className="w-full">Send reset code</Button>
+          </form>
+        </Card>
+      </div>
+    </PublicLayout>
   )
 }

@@ -15,6 +15,19 @@ from app.services.payment.wallet_service import WalletService
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
 
+@admin_bp.route("/public-stats", methods=["GET"])
+def public_stats():
+    """Non-sensitive aggregate counts for the public landing page. No auth
+    required and nothing here (revenue, names, emails) is sensitive -- this
+    exists so the landing page can show real numbers instead of hardcoded
+    marketing copy like "500+ riders"."""
+    return jsonify({
+        "total_students": User.query.filter_by(role=UserRole.STUDENT).count(),
+        "total_drivers": Driver.query.filter_by(status=DriverStatus.APPROVED).count(),
+        "completed_rides": RideRequest.query.filter_by(status=RideRequestStatus.COMPLETED).count(),
+    }), 200
+
+
 @admin_bp.route("/drivers", methods=["GET"])
 @jwt_required()
 @admin_required

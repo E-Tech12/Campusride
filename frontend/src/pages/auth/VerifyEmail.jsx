@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext"
 import Input from "../../components/Input"
 import Button from "../../components/Button"
 import Card from "../../components/Card"
+import PublicLayout from "../../components/PublicLayout"
 
 export default function VerifyEmail() {
   const location = useLocation()
@@ -24,7 +25,10 @@ export default function VerifyEmail() {
     try {
       const res = await api.post("/auth/verify-email", { email, otp_code: otp })
       login(res.data.access_token, res.data.user)
-      navigate("/student")
+      const role = res.data.user.role
+      if (role === "driver") navigate("/driver")
+      else if (role === "admin") navigate("/admin")
+      else navigate("/student")
     } catch (err) {
       setError(err.response?.data?.error || "Verification failed")
     } finally {
@@ -47,8 +51,9 @@ export default function VerifyEmail() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-16">
-      <h1 className="font-display font-bold text-3xl mb-2">Verify your email</h1>
+    <PublicLayout>
+    <div className="max-w-md mx-auto px-4 py-16">
+      <h1 className="font-display font-bold text-3xl mb-2 text-white">Verify your email</h1>
       <p className="text-mist mb-8">Enter the 6-digit code we sent to your email.</p>
 
       <Card>
@@ -76,5 +81,6 @@ export default function VerifyEmail() {
         </button>
       </Card>
     </div>
+    </PublicLayout>
   )
 }

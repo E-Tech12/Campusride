@@ -63,7 +63,7 @@ export default function StudentWallet() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
+    <div className="mx-auto max-w-4xl p-4 sm:p-6">
       <h1 className="mb-8 text-3xl font-display font-bold text-white">My Wallet</h1>
 
       <div className="grid gap-6 md:grid-cols-2">

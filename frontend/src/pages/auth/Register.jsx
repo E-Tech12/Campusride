@@ -2,6 +2,8 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../../services/api"
 import Input from "../../components/Input"
+import PublicLayout from "../../components/PublicLayout"
+import { GraduationCap, Car, Check } from "lucide-react"
 
 export default function Register() {
   const navigate = useNavigate()
@@ -30,38 +32,56 @@ export default function Register() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-ink-950 px-4 py-12 relative overflow-hidden">
+    <PublicLayout>
+    <div className="flex min-h-[calc(100vh-128px)] items-center justify-center px-4 py-12 relative overflow-hidden">
       {/* Decorative background glows */}
       <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-signal/10 blur-[120px] pointer-events-none" />
       <div className="absolute -bottom-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-brand/10 blur-[120px] pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-lg rounded-card border border-ink-800 bg-ink-900 p-8 shadow-glass">
+      <div className="relative z-10 w-full max-w-lg rounded-card border border-ink-800 bg-ink-900 p-5 sm:p-8 shadow-glass">
         <div className="mb-8 text-center">
           <h1 className="font-display text-3xl font-bold text-white">Create your account</h1>
           <p className="mt-2 text-mist">Join CampusRide and start your journey.</p>
         </div>
 
-        <div className="mb-6 flex rounded-xl bg-ink-950 p-1">
-          <button 
+        <div className="relative mb-8 grid grid-cols-2 rounded-2xl border border-ink-800 bg-ink-950 p-1.5">
+          <div
+            className="absolute inset-y-1.5 left-1.5 w-[calc(50%-6px)] rounded-xl bg-gradient-to-r from-signal to-signal-dim shadow-glow transition-transform duration-300 ease-out"
+            style={{ transform: role === "driver" ? "translateX(100%)" : "translateX(0)" }}
+          />
+          <button
             type="button"
-            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${role === 'student' ? 'bg-ink-800 text-white shadow-sm' : 'text-mist hover:text-white'}`}
             onClick={() => setRole("student")}
+            className={`relative z-10 flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-colors duration-200 ${
+              role === "student" ? "text-ink-950" : "text-mist hover:text-white"
+            }`}
           >
-            I am a Student
+            <GraduationCap size={16} />
+            Student
+            {role === "student" && <Check size={14} className="opacity-80" />}
           </button>
-          <button 
+          <button
             type="button"
-            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${role === 'driver' ? 'bg-ink-800 text-white shadow-sm' : 'text-mist hover:text-white'}`}
             onClick={() => setRole("driver")}
+            className={`relative z-10 flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-colors duration-200 ${
+              role === "driver" ? "text-ink-950" : "text-mist hover:text-white"
+            }`}
           >
-            I am a Driver
+            <Car size={16} />
+            Driver
+            {role === "driver" && <Check size={14} className="opacity-80" />}
           </button>
         </div>
+        <p className="-mt-5 mb-6 text-center text-xs text-mist">
+          {role === "student"
+            ? "Book rides across campus with your student account."
+            : "Apply to drive students on your route and start earning."}
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <Input label="Full Name" value={form.full_name} onChange={handleChange("full_name")} required />
           <Input label="Email Address" type="email" value={form.email} onChange={handleChange("email")} required />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Username" value={form.username} onChange={handleChange("username")} required />
             <Input label="Phone Number" value={form.phone} onChange={handleChange("phone")} />
           </div>
@@ -73,7 +93,7 @@ export default function Register() {
           {role === "driver" && (
             <div className="space-y-5 border-t border-ink-800 pt-5 mt-2">
               <h3 className="font-display text-sm uppercase tracking-wider text-mist">Vehicle Details</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="License Number" value={form.license_number} onChange={handleChange("license_number")} required />
                 <Input label="Plate Number" value={form.plate_number} onChange={handleChange("plate_number")} required />
                 <Input label="Vehicle Make" value={form.vehicle_make} onChange={handleChange("vehicle_make")} placeholder="e.g. Toyota" required />
@@ -107,5 +127,6 @@ export default function Register() {
         </p>
       </div>
     </div>
+    </PublicLayout>
   )
 }
