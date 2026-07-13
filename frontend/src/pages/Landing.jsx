@@ -53,7 +53,7 @@ export default function Landing() {
 
   return (
     <PublicLayout>
-      <div className="min-h-screen bg-[#0a0a0f] relative">
+      <div className="min-h-screen bg-[#0a0a0f] relative overflow-x-hidden">
         {/* ANIMATED BACKGROUND */}
         <div className="fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
           <RouteBackground />

@@ -42,14 +42,14 @@ export default function RideHistory() {
 
       <div className="space-y-3">
         {requests.map((r) => (
-          <Card key={r.id} className="flex justify-between items-center">
-            <div>
-              <div className="font-medium text-sm">{r.zone?.name}</div>
+          <Card key={r.id} className="flex justify-between items-center gap-3 flex-wrap">
+            <div className="min-w-0">
+              <div className="font-medium text-sm truncate">{r.zone?.name}</div>
               <div className="text-xs text-mist mt-0.5">
                 {r.requested_at && format(new Date(r.requested_at), "MMM d, yyyy · h:mm a")}
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <div className="font-mono-num text-signal text-sm mb-1">₦{r.price}</div>
               <StatusBadge status={r.status} />
             </div>

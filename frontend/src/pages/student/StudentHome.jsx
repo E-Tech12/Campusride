@@ -105,7 +105,7 @@ export default function StudentHome() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
         <h1 className="font-display font-bold text-2xl">Find a ride</h1>
         {geoError && <span className="text-xs text-coral">Enable location to see nearby drivers</span>}
       </div>
@@ -128,7 +128,7 @@ export default function StudentHome() {
       )}
 
       <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-        <div className="h-[420px] lg:h-[600px]">
+        <div className="h-[65vh] min-h-[320px] max-h-[460px] lg:h-[600px] lg:max-h-none">
           <LiveMap myPosition={position} drivers={drivers} onSelectDriver={setSelected} />
         </div>
 
@@ -148,13 +148,13 @@ export default function StudentHome() {
               className="cursor-pointer hover:border-signal/40 transition-colors"
               onClick={() => setSelected(d)}
             >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <div className="font-medium text-sm">{d.vehicle_color} {d.vehicle_make} {d.vehicle_model}</div>
+              <div className="flex justify-between items-start gap-2 mb-2 flex-wrap">
+                <div className="min-w-0">
+                  <div className="font-medium text-sm truncate">{d.vehicle_color} {d.vehicle_make} {d.vehicle_model}</div>
                   <div className="text-xs text-mist font-mono-num">{d.plate_number}</div>
                 </div>
                 {d.distance_km != null && (
-                  <span className="flex items-center gap-1 text-xs text-signal font-mono-num">
+                  <span className="flex items-center gap-1 text-xs text-signal font-mono-num shrink-0">
                     <Navigation size={12} /> {d.distance_km} km{d.eta_minutes != null ? ` · ~${d.eta_minutes} min` : ""}
                   </span>
                 )}
@@ -170,13 +170,13 @@ export default function StudentHome() {
 
       {selected && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={() => setSelected(null)}>
-          <div onClick={(e) => e.stopPropagation()} className="bg-ink-800 border border-ink-600 rounded-card p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="font-display font-semibold text-lg">{selected.vehicle_color} {selected.vehicle_make} {selected.vehicle_model}</h2>
+          <div onClick={(e) => e.stopPropagation()} className="bg-ink-800 border border-ink-600 rounded-card p-4 sm:p-6 max-w-md w-full max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4 gap-3">
+              <div className="min-w-0">
+                <h2 className="font-display font-semibold text-lg truncate">{selected.vehicle_color} {selected.vehicle_make} {selected.vehicle_model}</h2>
                 <p className="text-sm text-mist font-mono-num">{selected.plate_number}</p>
               </div>
-              <button onClick={() => setSelected(null)} className="text-mist hover:text-white"><X size={20} /></button>
+              <button onClick={() => setSelected(null)} className="text-mist hover:text-white shrink-0 -mr-1 p-1"><X size={20} /></button>
             </div>
 
             <SeatBoard capacity={selected.seat_capacity} available={selected.seats_available} />

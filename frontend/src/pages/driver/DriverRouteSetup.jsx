@@ -67,9 +67,9 @@ export default function DriverRouteSetup() {
           <div className="font-mono-num text-xs uppercase tracking-wide text-mist mb-3">Your routes</div>
           <div className="space-y-2">
             {existingRoutes.map((r) => (
-              <div key={r.id} className="text-sm flex justify-between items-center py-2 border-b border-ink-700 last:border-0">
-                <span>{r.name}</span>
-                <span className="text-mist text-xs">{r.stops.length} stops</span>
+              <div key={r.id} className="text-sm flex justify-between items-center gap-2 py-2 border-b border-ink-700 last:border-0">
+                <span className="truncate min-w-0">{r.name}</span>
+                <span className="text-mist text-xs shrink-0">{r.stops.length} stops</span>
               </div>
             ))}
           </div>
@@ -105,15 +105,15 @@ export default function DriverRouteSetup() {
           {selectedStops.length === 0 && <p className="text-sm text-mist">Add stops from the left.</p>}
           <div className="space-y-2">
             {selectedStops.map((s, i) => (
-              <div key={s.id} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-ink-600 bg-ink-900">
-                <span className="font-mono-num text-xs text-mist w-5">{i + 1}</span>
-                <span className="flex-1 text-sm">{s.name}</span>
-                <span className="font-mono-num text-signal text-xs">₦{s.price}</span>
-                <div className="flex flex-col">
-                  <button onClick={() => moveStop(i, -1)} disabled={i === 0} className="text-mist hover:text-white disabled:opacity-20 text-xs leading-none">▲</button>
-                  <button onClick={() => moveStop(i, 1)} disabled={i === selectedStops.length - 1} className="text-mist hover:text-white disabled:opacity-20 text-xs leading-none">▼</button>
+              <div key={s.id} className="flex items-center gap-1 px-3 py-2.5 rounded-lg border border-ink-600 bg-ink-900">
+                <span className="font-mono-num text-xs text-mist w-5 shrink-0">{i + 1}</span>
+                <span className="flex-1 text-sm min-w-0 truncate">{s.name}</span>
+                <span className="font-mono-num text-signal text-xs shrink-0">₦{s.price}</span>
+                <div className="flex flex-col shrink-0">
+                  <button onClick={() => moveStop(i, -1)} disabled={i === 0} className="text-mist hover:text-white disabled:opacity-20 text-xs leading-none p-1.5 min-w-[28px] min-h-[28px]">▲</button>
+                  <button onClick={() => moveStop(i, 1)} disabled={i === selectedStops.length - 1} className="text-mist hover:text-white disabled:opacity-20 text-xs leading-none p-1.5 min-w-[28px] min-h-[28px]">▼</button>
                 </div>
-                <button onClick={() => removeStop(s.id)} className="text-mist hover:text-coral"><X size={14} /></button>
+                <button onClick={() => removeStop(s.id)} className="text-mist hover:text-coral shrink-0 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center"><X size={14} /></button>
               </div>
             ))}
           </div>

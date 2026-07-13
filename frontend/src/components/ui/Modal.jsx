@@ -11,18 +11,18 @@ export default function Modal({ isOpen, onClose, title, children }) {
         onClick={onClose}
       />
       
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-card border border-ink-800 bg-ink-900 shadow-glass animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between border-b border-ink-800 px-6 py-4">
-          <h2 className="text-xl font-display font-semibold text-white">{title}</h2>
+      <div className="relative z-10 flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-card border border-ink-800 bg-ink-900 shadow-glass animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex shrink-0 items-center justify-between border-b border-ink-800 px-4 sm:px-6 py-4">
+          <h2 className="text-lg sm:text-xl font-display font-semibold text-white">{title}</h2>
           <button 
             onClick={onClose}
-            className="rounded-full p-2 text-mist hover:bg-ink-800 hover:text-white transition-colors"
+            className="rounded-full p-2 text-mist hover:bg-ink-800 hover:text-white transition-colors -mr-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
         </div>
         
-        <div className="p-6">
+        <div className="overflow-y-auto p-4 sm:p-6">
           {children}
         </div>
       </div>

@@ -81,16 +81,16 @@ export default function StudentWallet() {
           ) : (
             <ul className="max-h-64 space-y-3 overflow-y-auto">
               {transactions.map((t) => (
-                <li key={t.id} className="flex items-center justify-between border-b border-ink-800 pb-2 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-white">
+                <li key={t.id} className="flex items-center justify-between gap-2 flex-wrap border-b border-ink-800 pb-2 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">
                       {TYPE_LABELS[t.type] || t.type}
                     </p>
-                    <p className="text-xs text-mist">
+                    <p className="text-xs text-mist truncate">
                       {t.created_at ? new Date(t.created_at).toLocaleString() : ''} · {t.status}
                     </p>
                   </div>
-                  <span className={`font-semibold ${t.amount < 0 ? 'text-coral' : 'text-signal'}`}>
+                  <span className={`shrink-0 font-semibold ${t.amount < 0 ? 'text-coral' : 'text-signal'}`}>
                     {t.amount < 0 ? '-' : '+'}₦{Math.abs(t.amount).toLocaleString()}
                   </span>
                 </li>

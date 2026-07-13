@@ -212,10 +212,10 @@ export default function DriverConsole() {
       {history.length > 0 && (
         <Section title="History">
           {history.slice(0, 10).map((r) => (
-            <Card key={r.id} className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-sm">{r.student_name}</div>
-                <div className="text-xs text-mist">{r.zone?.name}</div>
+            <Card key={r.id} className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate">{r.student_name}</div>
+                <div className="text-xs text-mist truncate">{r.zone?.name}</div>
               </div>
               <StatusBadge status={r.status} />
             </Card>

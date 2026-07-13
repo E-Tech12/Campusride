@@ -242,7 +242,7 @@ export default function AdminDashboard() {
         )}
 
         {tab === "zones" && (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="flex justify-between items-center mb-6">
                <h2 className="text-xl font-display font-semibold text-white">Zone Management</h2>
             </div>
@@ -265,9 +265,9 @@ export default function AdminDashboard() {
 
             <div className="space-y-2">
               {zones.map((z) => (
-                <div key={z.id} className="flex items-center justify-between p-4 bg-ink-950/30 rounded-lg border border-ink-800/50">
-                  <span className="text-sm text-white font-medium">{z.name}</span>
-                  <span className="font-mono text-signal font-bold text-sm">₦{z.price}</span>
+                <div key={z.id} className="flex items-center justify-between gap-2 p-4 bg-ink-950/30 rounded-lg border border-ink-800/50">
+                  <span className="text-sm text-white font-medium truncate min-w-0">{z.name}</span>
+                  <span className="font-mono text-signal font-bold text-sm shrink-0">₦{z.price}</span>
                 </div>
               ))}
             </div>
