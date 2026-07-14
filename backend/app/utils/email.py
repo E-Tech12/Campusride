@@ -1,27 +1,45 @@
-from flask_mail import Message
-from app.extensions import mail
+import os
+import resend
+
+resend.api_key = os.getenv("RESEND_API_KEY")
 
 
-def send_otp_email(to_email, otp_code, purpose="email_verification"):
-    subject_map = {
-        "email_verification": "Verify your CampusRide account",
-        "password_reset": "Reset your CampusRide password",
-        "login": "Your CampusRide login code",
-    }
-    subject = subject_map.get(purpose, "Your CampusRide verification code")
+def send_otp_email(email, otp_code, purpose="email_verification"):
+    if purpose == "password_reset":
+        subject = "CampusRide Password Reset Code"
+        heading = "Password Reset Request"
+    else:
+        subject = "CampusRide Email Verification"
+        heading = "Verify Your Email"
 
-    body = f"""Hi,
+    resend.Emails.send({
+        "from": "CampusRide <onboarding@resend.dev>",
+        "to": [email],
+        "subject": subject,
+        "html": f"""
+        <div style="font-family:Arial,sans-serif;padding:20px">
+            <h2>{heading}</h2>
+            <p>Your verification code is:</p>
 
-Your CampusRide verification code is: {otp_code}
+            <div style="
+                font-size:32px;
+                font-weight:bold;
+                letter-spacing:5px;
+                padding:15px;
+                background:#f5f5f5;
+                display:inline-block;
+                border-radius:8px;
+            ">
+                {otp_code}
+            </div>
 
-This code expires in 10 minutes. If you didn't request this, you can ignore this email.
+            <p style="margin-top:20px;">
+                This code expires in 10 minutes.
+            </p>
 
-- CampusRide Team
-"""
-    msg = Message(subject=subject, recipients=[to_email], body=body)
-    try:
-        mail.send(msg)
-        return True
-    except Exception as e:
-        print(f"[mail error] failed to send OTP email: {e}")
-        return False
+            <p>
+                If you did not request this, please ignore this email.
+            </p>
+        </div>
+        """
+    })

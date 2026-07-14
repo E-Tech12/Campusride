@@ -68,11 +68,14 @@ def register():
     db.session.add(otp)
     db.session.commit()
     try:
-        send_otp_email(user.email, otp_code, "email_verification")
+        send_otp_email(
+            email=user.email,
+            otp_code=otp_code,
+            purpose="email_verification"
+        )
     except Exception as e:
-        print(f"Email sending failed: {e}")
-
-    return jsonify({"message": "Registered. Check your email for a verification code.", "user_id": user.id}), 201
+        print("RESEND ERROR:", str(e))
+        return jsonify({"message": "Registered. Check your email for a verification code.", "user_id": user.id}), 201
 
 
 @auth_bp.route("/verify-email", methods=["POST"])
@@ -115,7 +118,14 @@ def resend_otp():
     )
     db.session.add(otp)
     db.session.commit()
-    send_otp_email(user.email, otp_code, otp.purpose)
+    try:
+        send_otp_email(
+        email=user.email,
+        otp_code=otp_code,
+        purpose=otp.purpose
+    )
+    except Exception as e:
+        print("RESEND ERROR:", str(e))
     return jsonify({"message": "OTP resent"}), 200
 
 
@@ -165,7 +175,14 @@ def forgot_password():
     )
     db.session.add(otp)
     db.session.commit()
-    send_otp_email(user.email, otp_code, "password_reset")
+    try:
+        send_otp_email(
+            email=user.email,
+            otp_code=otp_code,
+            purpose="password_reset"
+        )
+    except Exception as e:
+        print("RESEND ERROR:", str(e))
     return jsonify({"message": "If that email exists, a reset code has been sent"}), 200
 
 
