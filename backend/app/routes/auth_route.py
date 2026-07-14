@@ -67,7 +67,10 @@ def register():
     )
     db.session.add(otp)
     db.session.commit()
-    send_otp_email(user.email, otp_code, "email_verification")
+    try:
+        send_otp_email(user.email, otp_code, "email_verification")
+    except Exception as e:
+        print(f"Email sending failed: {e}")
 
     return jsonify({"message": "Registered. Check your email for a verification code.", "user_id": user.id}), 201
 
