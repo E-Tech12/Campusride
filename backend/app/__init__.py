@@ -22,7 +22,7 @@ def create_app():
     app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
     app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
 
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173,https://campusride-bolt.vercel.app/")
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173,https://campusride-bolt.vercel.app")
 
     # Init extensions
     db.init_app(app)
@@ -30,8 +30,15 @@ def create_app():
     jwt.init_app(app)
     mail.init_app(app)
     limiter.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": frontend_url}}, supports_credentials=True)
-    socketio.init_app(app, cors_allowed_origins=frontend_url)
+    
+    cors.init_app(
+    app,
+    resources={r"/api/*": {"origins": "*"}}
+    )
+    socketio.init_app(
+    app,
+    cors_allowed_origins="*"
+    )
 
     # Import models so Alembic can see them
     from app import models  # noqa: F401
