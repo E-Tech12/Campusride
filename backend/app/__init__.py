@@ -2,7 +2,7 @@ import os
 from flask import Flask, app, jsonify
 from dotenv import load_dotenv
 
-from app.extensions import db, migrate, jwt, cors, mail, socketio, limiter
+from app.extensions import db, migrate, jwt, cors, socketio, limiter
 
 load_dotenv()
 
