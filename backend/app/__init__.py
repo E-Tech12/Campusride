@@ -22,7 +22,7 @@ def create_app():
     app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
     app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
 
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173,https://campusride-bolt.vercel.app/")
 
     # Init extensions
     db.init_app(app)
