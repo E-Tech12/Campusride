@@ -345,7 +345,8 @@ def send_via_smtp(
 
     server = smtplib.SMTP(
         SMTP_HOST,
-        SMTP_PORT
+        SMTP_PORT,
+        timeout=15
     )
 
 
