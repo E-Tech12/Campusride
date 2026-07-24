@@ -49,7 +49,12 @@ export default function StudentWallet() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.post('/payments/deposit', { amount: Number(depositAmount) });
+      const res = await api.post('/payments/deposit', {
+      amount: Number(depositAmount),
+
+      callback_url:
+        `${window.location.origin}/wallet/verify`
+    });
       if (res.data.authorization_url) {
         window.location.href = res.data.authorization_url;
       } else {

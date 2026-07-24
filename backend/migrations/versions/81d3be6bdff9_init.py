@@ -15,7 +15,6 @@ in dependency order so a fresh database can actually run `flask db upgrade`.
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
 revision = '81d3be6bdff9'
 down_revision = None

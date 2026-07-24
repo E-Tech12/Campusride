@@ -32,6 +32,20 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
 
+    # --- Security hardening (Phase 1) ---
+    # Withdrawal protection: any withdrawal is blocked while now() < withdrawal_locked_until.
+    withdrawal_locked_until = db.Column(db.DateTime, nullable=True)
+
+    # Global session revocation: any JWT with iat < tokens_invalidated_at is rejected.
+    tokens_invalidated_at = db.Column(db.DateTime, nullable=True)
+
+    # Brute-force / account lockout protection.
+    failed_login_attempts = db.Column(db.Integer, default=0, nullable=False)
+    locked_until = db.Column(db.DateTime, nullable=True)
+
+    # Velocity-limit bookkeeping (reset windows are computed on read, not stored).
+    password_changed_at = db.Column(db.DateTime, nullable=True)
+
     # relationships
     driver_profile = db.relationship(
         "Driver",
@@ -72,3 +86,21 @@ class User(db.Model):
             "account_active": self.account_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+    def is_locked(self):
+        return bool(self.locked_until and datetime.utcnow() < self.locked_until)
+
+    def is_withdrawal_locked(self):
+        return bool(self.withdrawal_locked_until and datetime.utcnow() < self.withdrawal_locked_until)
+
+    def to_admin_dict(self):
+        data = self.to_dict()
+        data.update({
+            "failed_login_attempts": self.failed_login_attempts,
+            "locked_until": self.locked_until.isoformat() if self.locked_until else None,
+            "is_locked": self.is_locked(),
+            "withdrawal_locked_until": self.withdrawal_locked_until.isoformat() if self.withdrawal_locked_until else None,
+            "is_withdrawal_locked": self.is_withdrawal_locked(),
+            "last_login": self.last_login.isoformat() if self.last_login else None,
+        })
+        return data

@@ -61,3 +61,6 @@ def handle_driver_location_ping(data):
     emit("driver_location_update", {
         "driver_id": driver_id, "lat": lat, "lng": lng
     }, namespace="/rides", room="location_updates")
+
+    from app.services import ride_completion_service
+    ride_completion_service.on_driver_location_update(driver)

@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
 
-from app.extensions import db, socketio
+from app.extensions import db, socketio, limiter
 from app.models import (
     User, UserRole, Driver, DriverStatus, Route, RouteStop, Zone,
     RideRequest, RideRequestStatus,
@@ -14,6 +14,10 @@ from app.models import (
 from app.utils.decorators import driver_required
 from app.utils.geo import haversine_km, eta_minutes
 from app.services.payment.wallet_service import WalletService
+from app.services.payment.bursapay_provider import BursaPayProvider
+from app.services import security_service as sec
+from app.services import ride_completion_service
+from app.models import KYCStatus
 
 driver_bp = Blueprint("driver", __name__, url_prefix="/api/driver")
 
@@ -193,6 +197,9 @@ def update_location():
     socketio.emit("driver_location_update", {
         "driver_id": driver.id, "lat": lat, "lng": lng
     }, namespace="/rides")
+
+    ride_completion_service.on_driver_location_update(driver)
+
     return jsonify({"message": "Location updated"}), 200
 
 
@@ -249,6 +256,12 @@ def respond_to_request(request_id):
     socketio.emit("ride_request_update", ride_req.to_dict(), namespace="/rides",
                    room=f"student_{ride_req.student_id}")
     socketio.emit("driver_status_update", driver.to_dict(), namespace="/rides")
+
+    if decision == "accept":
+        from app.services.notification_service import notify
+        from app.models import NotificationEvent
+        notify(ride_req.student_id, NotificationEvent.RIDE_ACCEPTED)
+
     return jsonify({"message": f"Request {decision}ed", "ride_request": ride_req.to_dict()}), 200
 
 
@@ -266,6 +279,11 @@ def mark_pickup(request_id):
     db.session.commit()
     socketio.emit("ride_request_update", ride_req.to_dict(), namespace="/rides",
                    room=f"student_{ride_req.student_id}")
+
+    from app.services.notification_service import notify
+    from app.models import NotificationEvent
+    notify(ride_req.student_id, NotificationEvent.RIDE_STARTED)
+
     return jsonify({"ride_request": ride_req.to_dict()}), 200
 
 
@@ -273,30 +291,42 @@ def mark_pickup(request_id):
 @jwt_required()
 @driver_required
 def mark_complete(request_id):
+    """Destination completion is GPS-geofence-driven (see
+    ride_completion_service.on_driver_location_update), not a manual button --
+    payouts shouldn't hinge on a driver simply tapping "complete". This
+    endpoint is kept only as a manual fallback for zones that have no
+    lat/lng configured (so geofencing isn't possible), and even then it only
+    moves the ride to AWAITING_COMPLETION for the student to confirm, exactly
+    like the automatic path -- it never releases funds directly."""
     user_id = int(get_jwt_identity())
     driver = User.query.get(user_id).driver_profile
     ride_req = RideRequest.query.filter_by(id=request_id, driver_id=driver.id).first()
     if not ride_req or ride_req.status != RideRequestStatus.ONGOING:
         return jsonify({"error": "Invalid request state"}), 409
-        
-    if ride_req.payment_reference:
-        try:
-            from app.services.payment.wallet_service import WalletService
-            WalletService.complete_ride_payment(
-                student_id=ride_req.student_id,
-                driver_user_id=driver.user_id,
-                amount=ride_req.price,
-                reference=ride_req.payment_reference
-            )
-        except Exception as e:
-            return jsonify({"error": f"Payment completion failed: {e}"}), 500
 
-    ride_req.status = RideRequestStatus.COMPLETED
-    ride_req.completed_at = datetime.utcnow()
+    zone = ride_req.zone
+    if zone and zone.lat is not None and zone.lng is not None:
+        return jsonify({
+            "error": "This zone has GPS coordinates configured -- destination arrival is "
+                     "detected automatically and cannot be triggered manually."
+        }), 409
+
+    ride_req.status = RideRequestStatus.AWAITING_COMPLETION
+    ride_req.awaiting_completion_at = datetime.utcnow()
+    ride_req.completion_deadline = datetime.utcnow() + timedelta(
+        minutes=sec.COMPLETION_AUTO_RELEASE_MINUTES
+    )
     db.session.commit()
+
+    socketio.emit("ride_awaiting_completion", ride_req.to_dict(), namespace="/rides",
+                   room=f"student_{ride_req.student_id}")
     socketio.emit("ride_request_update", ride_req.to_dict(), namespace="/rides",
                    room=f"student_{ride_req.student_id}")
-    socketio.emit("driver_status_update", driver.to_dict(), namespace="/rides")
+
+    from app.services.notification_service import notify
+    from app.models import NotificationEvent
+    notify(ride_req.student_id, NotificationEvent.RIDE_AWAITING_CONFIRMATION)
+
     return jsonify({"ride_request": ride_req.to_dict()}), 200
 
 
@@ -371,9 +401,48 @@ def earnings():
     }), 200
 
 
+def _driver_kyc_status(driver):
+    from app.models import DriverKYC
+    latest = DriverKYC.query.filter_by(driver_id=driver.id).order_by(DriverKYC.created_at.desc()).first()
+    return latest.status if latest else None
+
+
+@driver_bp.route("/withdraw/request-otp", methods=["POST"])
+@jwt_required()
+@driver_required
+def request_withdrawal_otp():
+    user = User.query.get(int(get_jwt_identity()))
+    driver = user.driver_profile
+    if not driver:
+        return jsonify({"error": "No driver profile"}), 404
+
+    data = request.get_json() or {}
+    amount = data.get("amount")
+    if not amount or amount <= 0:
+        return jsonify({"error": "Invalid amount"}), 400
+
+    if _driver_kyc_status(driver) != KYCStatus.APPROVED:
+        return jsonify({"error": "Identity verification (KYC) must be approved before you can withdraw"}), 403
+
+    wallet = WalletService.get_or_create_wallet(user.id)
+    if amount > wallet.balance:
+        return jsonify({"error": "Insufficient balance"}), 400
+
+    limit_error = sec.check_withdrawal_allowed(user, driver.id, amount)
+    if limit_error:
+        return jsonify({"error": limit_error}), 429
+
+    otp_error = sec.request_high_risk_otp(user, "withdrawal")
+    if otp_error:
+        return jsonify({"error": otp_error}), 429
+
+    return jsonify({"message": "Verification code sent to your email"}), 200
+
+
 @driver_bp.route("/withdraw", methods=["POST"])
 @jwt_required()
 @driver_required
+@limiter.limit("5 per hour")
 def request_withdrawal():
     user = User.query.get(int(get_jwt_identity()))
     driver = user.driver_profile
@@ -385,9 +454,42 @@ def request_withdrawal():
     if not amount or amount <= 0:
         return jsonify({"error": "Invalid amount"}), 400
 
+    if _driver_kyc_status(driver) != KYCStatus.APPROVED:
+        return jsonify({"error": "Identity verification (KYC) must be approved before you can withdraw"}), 403
+
+    otp_error = sec.verify_high_risk_otp(user, "withdrawal", data.get("otp_code"))
+    if otp_error:
+        return jsonify({"error": otp_error}), 400
+
+    # Re-check limits at confirmation time too (amount/timing could have
+    # changed between the OTP request and this call).
+    limit_error = sec.check_withdrawal_allowed(user, driver.id, amount)
+    if limit_error:
+        return jsonify({"error": limit_error}), 429
+
     wallet = WalletService.get_or_create_wallet(user.id)
     if amount > wallet.balance:
         return jsonify({"error": "Insufficient balance"}), 400
+
+    bank_code = data.get("bank_code")
+    account_number = data.get("account_number")
+    account_name = data.get("account_name")
+    if not bank_code or not account_number or not account_name:
+        return jsonify({"error": "Bank code, account number, and account name are required."}), 400
+
+    provider = BursaPayProvider()
+    try:
+        resolved = provider.resolve_account_number(account_number, bank_code)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception:
+        return jsonify({"error": "Unable to verify bank account at this time. Please try again later."}), 503
+
+    verified_name = resolved.get("account_name")
+    if verified_name and account_name.strip().lower() != verified_name.strip().lower():
+        return jsonify({
+            "error": f"Account name does not match verified account name: {verified_name}"
+        }), 400
 
     reference = f"wd_{uuid.uuid4().hex}"
     wallet.balance -= amount
@@ -395,9 +497,12 @@ def request_withdrawal():
     withdrawal = WithdrawalRequest(
         driver_id=driver.id,
         amount=amount,
-        bank_code=data.get("bank_code"),
-        account_number=data.get("account_number"),
-        account_name=data.get("account_name"),
+        bank_code=bank_code,
+        account_number=account_number,
+        account_name=account_name,
+        verified_account_name=verified_name,
+        bank_verified=True,
+        verified_at=datetime.utcnow(),
         reference=reference,
     )
     txn = WalletTransaction(
@@ -410,7 +515,19 @@ def request_withdrawal():
     )
     db.session.add(withdrawal)
     db.session.add(txn)
+
+    from app.services import fraud_service
+    fraud_service.check_unusual_withdrawal(user.id, driver.id, amount)
+
+    from app.models import SecurityLog, SecurityEventType
+    SecurityLog.record(user.id, SecurityEventType.WITHDRAWAL_REQUESTED,
+                        description=f"Withdrawal of {amount} requested", meta_data={"reference": reference})
+    if data.get("bank_code") or data.get("account_number"):
+        SecurityLog.record(user.id, SecurityEventType.BANK_ACCOUNT_CHANGED,
+                            description="Payout bank details submitted with withdrawal (OTP-verified)",
+                            meta_data={"account_number": data.get("account_number")})
     db.session.commit()
+
     return jsonify({"message": "Withdrawal requested", "withdrawal": withdrawal.to_dict()}), 201
 
 

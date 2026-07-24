@@ -39,6 +39,9 @@ export default function DriverEarnings() {
   const [accountName, setAccountName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -56,9 +59,33 @@ export default function DriverEarnings() {
     load();
   }, [load]);
 
+  const handleSendOtp = async () => {
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+      setOtpError('Enter a valid amount');
+      return;
+    }
+    setOtpError(null);
+    try {
+      await api.post('/driver/withdraw/request-otp', {
+        amount: Number(amount),
+      });
+      setOtpSent(true);
+    } catch (err) {
+      setOtpError(err.response?.data?.error || 'Could not send verification code');
+    }
+  };
+
   const handleWithdraw = async () => {
     if (!amount || isNaN(amount) || Number(amount) <= 0) {
       setFormError('Enter a valid amount');
+      return;
+    }
+    if (!bankCode || !accountNumber || !accountName) {
+      setFormError('Bank code, account number, and account name are required.');
+      return;
+    }
+    if (!otpCode) {
+      setFormError('Enter the verification code sent to your email.');
       return;
     }
     setSubmitting(true);
@@ -69,12 +96,15 @@ export default function DriverEarnings() {
         account_number: accountNumber,
         bank_code: bankCode,
         account_name: accountName,
+        otp_code: otpCode,
       });
       setWithdrawOpen(false);
       setAmount('');
       setAccountNumber('');
       setBankCode('');
       setAccountName('');
+      setOtpCode('');
+      setOtpSent(false);
       await load();
     } catch (err) {
       setFormError(err.response?.data?.error || 'Withdrawal request failed');
@@ -238,7 +268,29 @@ export default function DriverEarnings() {
               className="mt-1 w-full rounded-xl border border-ink-700 bg-ink-950 p-3 text-white placeholder-ink-600 focus:border-signal focus:outline-none focus:ring-1 focus:ring-signal"
             />
           </div>
-          {formError && <p className="text-sm text-coral">{formError}</p>}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={handleSendOtp}
+              className="w-full rounded-xl border border-ink-700 bg-ink-900 px-4 py-3 text-sm font-semibold text-white transition hover:border-signal hover:bg-ink-800"
+            >
+              Send verification code
+            </button>
+            <div>
+              <label className="block text-sm font-medium text-mist">Verification Code</label>
+              <input
+                type="text"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-ink-700 bg-ink-950 p-3 text-white placeholder-ink-600 focus:border-signal focus:outline-none focus:ring-1 focus:ring-signal"
+                placeholder="Enter code sent to email"
+              />
+            </div>
+          </div>
+          {otpSent && <p className="text-sm text-success">Verification code sent. Check your email.</p>}
+          {(otpError || formError) && (
+            <p className="text-sm text-coral">{otpError || formError}</p>
+          )}
           <button
             onClick={handleWithdraw}
             disabled={submitting}

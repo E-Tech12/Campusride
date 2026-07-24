@@ -6,6 +6,8 @@ from app.extensions import db, socketio
 from app.models import User, Driver, DriverStatus, Route, RouteStop, Zone, RideRequest, RideRequestStatus
 from app.utils.decorators import student_required
 from app.utils.geo import haversine_km, eta_minutes
+from app.services import ride_completion_service
+from app.services.eta_service import get_eta
 
 ride_bp = Blueprint("ride", __name__, url_prefix="/api/rides")
 
@@ -16,11 +18,15 @@ def enrich_ride_request(ride_req, driver=None):
     driver keeps moving."""
     data = ride_req.to_dict()
     driver = driver or ride_req.driver
-    distance = None
     if driver and driver.current_lat is not None and ride_req.pickup_lat is not None:
-        distance = haversine_km(driver.current_lat, driver.current_lng, ride_req.pickup_lat, ride_req.pickup_lng)
-    data["distance_km"] = round(distance, 2) if distance is not None else None
-    data["eta_minutes"] = eta_minutes(distance)
+        eta = get_eta(driver.current_lat, driver.current_lng, ride_req.pickup_lat, ride_req.pickup_lng)
+        data["distance_km"] = eta["distance_km"]
+        data["eta_minutes"] = eta["eta_minutes"]
+        data["eta_source"] = eta["source"]
+    else:
+        data["distance_km"] = None
+        data["eta_minutes"] = None
+        data["eta_source"] = "unavailable"
     return data
 
 
@@ -131,7 +137,7 @@ def request_seat():
     db.session.commit()
     
     if payment_method == "paystack":
-        from app.services.payment.paystack_provider import PaystackProvider
+        from web.campusride.backend.app.services.payment.bursapay_provider import PaystackProvider
         from app.models import Payment, PaymentStatus
         provider = PaystackProvider()
         pay_reference = f"pay_{uuid.uuid4().hex}"
@@ -158,6 +164,10 @@ def request_seat():
 
     socketio.emit("new_ride_request", enrich_ride_request(ride_req, driver), namespace="/rides",
                    room=f"driver_{driver.id}")
+
+    from app.services import fraud_service
+    fraud_service.check_excessive_ride_creation(user_id)
+
     return jsonify({"message": "Seat requested", "ride_request": ride_req.to_dict()}), 201
 
 
@@ -166,12 +176,46 @@ def request_seat():
 @student_required
 def my_requests():
     user_id = int(get_jwt_identity())
+    ride_completion_service.auto_release_overdue_completions()
+
     status_filter = request.args.get("status")
     q = RideRequest.query.filter_by(student_id=user_id)
     if status_filter:
         q = q.filter_by(status=RideRequestStatus(status_filter))
     requests = q.order_by(RideRequest.requested_at.desc()).all()
     return jsonify([enrich_ride_request(r) for r in requests]), 200
+
+
+@ride_bp.route("/requests/<int:request_id>/confirm-completion", methods=["POST"])
+@jwt_required()
+@student_required
+def confirm_completion(request_id):
+    """Student confirms the ride happened after the driver's GPS reached the
+    destination geofence (or a manual fallback for zones with no coordinates).
+    Releases the held funds immediately."""
+    user_id = int(get_jwt_identity())
+    ride_req = RideRequest.query.filter_by(id=request_id, student_id=user_id).first()
+    if not ride_req or ride_req.status != RideRequestStatus.AWAITING_COMPLETION:
+        return jsonify({"error": "Ride is not awaiting completion"}), 409
+
+    ride_completion_service.confirm_completion(ride_req)
+    return jsonify({"ride_request": ride_req.to_dict()}), 200
+
+
+@ride_bp.route("/requests/<int:request_id>/report-problem", methods=["POST"])
+@jwt_required()
+@student_required
+def report_problem(request_id):
+    """Student reports an issue instead of confirming -- moves the ride to
+    DISPUTED and keeps funds held pending admin review."""
+    user_id = int(get_jwt_identity())
+    ride_req = RideRequest.query.filter_by(id=request_id, student_id=user_id).first()
+    if not ride_req or ride_req.status != RideRequestStatus.AWAITING_COMPLETION:
+        return jsonify({"error": "Ride is not awaiting completion"}), 409
+
+    reason = (request.get_json() or {}).get("reason", "Not specified")
+    ride_completion_service.report_problem(ride_req, reason)
+    return jsonify({"ride_request": ride_req.to_dict()}), 200
 
 
 @ride_bp.route("/requests/<int:request_id>/cancel", methods=["POST"])
@@ -197,6 +241,10 @@ def cancel_request(request_id):
     db.session.commit()
     socketio.emit("ride_request_update", ride_req.to_dict(), namespace="/rides",
                    room=f"driver_{ride_req.driver_id}")
+
+    from app.services import fraud_service
+    fraud_service.check_excessive_cancellation(user_id)
+
     return jsonify({"ride_request": ride_req.to_dict()}), 200
 
 

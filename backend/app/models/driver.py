@@ -96,6 +96,15 @@ class Driver(db.Model):
         back_populates="driver"
     )
 
+    def latest_kyc(self):
+        from app.models.kyc import DriverKYC
+        return DriverKYC.query.filter_by(driver_id=self.id).order_by(DriverKYC.created_at.desc()).first()
+
+    def is_kyc_approved(self):
+        from app.models.kyc import DriverKYC, KYCStatus
+        kyc = self.latest_kyc()
+        return bool(kyc and kyc.status == KYCStatus.APPROVED)
+
     def seats_available(self):
         """Seats left on the driver's current run: capacity minus every rider
         currently occupying a seat (accepted but not yet picked up, or ongoing)."""
@@ -127,6 +136,7 @@ class Driver(db.Model):
             "active_route": self.active_route.to_dict() if self.active_route else None,
             "rejection_reason": self.rejection_reason,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "kyc_status": (self.latest_kyc().status.value if self.latest_kyc() else "not_submitted"),
         }
         if include_contact and self.user:
             data["email"] = self.user.email

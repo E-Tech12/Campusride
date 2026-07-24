@@ -67,6 +67,9 @@ class WithdrawalRequest(db.Model):
     bank_code = db.Column(db.String(50))
     account_number = db.Column(db.String(50))
     account_name = db.Column(db.String(100))
+    verified_account_name = db.Column(db.String(100))
+    bank_verified = db.Column(db.Boolean, default=False, nullable=False)
+    verified_at = db.Column(db.DateTime)
     reference = db.Column(db.String(100), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     processed_at = db.Column(db.DateTime)
@@ -83,6 +86,9 @@ class WithdrawalRequest(db.Model):
             "bank_code": self.bank_code,
             "account_number": self.account_number,
             "account_name": self.account_name,
+            "verified_account_name": self.verified_account_name,
+            "bank_verified": self.bank_verified,
+            "verified_at": self.verified_at.isoformat() if self.verified_at else None,
             "reference": self.reference,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "processed_at": self.processed_at.isoformat() if self.processed_at else None,

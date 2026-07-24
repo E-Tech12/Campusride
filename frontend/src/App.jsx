@@ -23,6 +23,7 @@ import Faq from "./pages/public/Faq"
 import StudentHome from "./pages/student/StudentHome"
 import RideHistory from "./pages/student/RideHistory"
 import StudentWallet from "./pages/student/StudentWallet"
+import WalletVerify from "./pages/student/WalletVerify"
 
 import DriverApply from "./pages/driver/DriverApply"
 import DriverConsole from "./pages/driver/DriverConsole"
@@ -132,6 +133,10 @@ export default function App() {
               <DriverEarnings />
             </ProtectedRoute>
           }
+        />
+        <Route
+        path="/wallet/verify"
+        element={<WalletVerify />}
         />
 
         <Route

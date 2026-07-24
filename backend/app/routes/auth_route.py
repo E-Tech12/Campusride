@@ -2,9 +2,10 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
-from app.extensions import db
-from app.models import User, UserRole, OTP, PasswordResetToken
+from app.extensions import db, limiter
+from app.models import User, UserRole, OTP, PasswordResetToken, SecurityLog, SecurityEventType
 from app.utils.email import send_otp_email
+from app.services import security_service as sec
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -75,7 +76,7 @@ def register():
         )
     except Exception as e:
         print("RESEND ERROR:", str(e))
-        return jsonify({"message": "Registered. Check your email for a verification code.", "user_id": user.id}), 201
+    return jsonify({"message": "Registered. Check your email for a verification code.", "user_id": user.id}), 201
 
 
 @auth_bp.route("/verify-email", methods=["POST"])
@@ -102,11 +103,16 @@ def verify_email():
 
 
 @auth_bp.route("/resend-otp", methods=["POST"])
+@limiter.limit("10 per hour")
 def resend_otp():
     data = request.get_json() or {}
     user = User.query.filter_by(email=data.get("email")).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
+
+    velocity_error = sec.check_otp_velocity(user, data.get("purpose", "email_verification"))
+    if velocity_error:
+        return jsonify({"error": velocity_error}), 429
 
     otp_code = OTP.generate_otp()
     otp = OTP(
@@ -130,6 +136,7 @@ def resend_otp():
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit("10 per minute")
 def login():
     data = request.get_json() or {}
     identifier = data.get("email") or data.get("username")
@@ -141,7 +148,17 @@ def login():
         (User.email == identifier) | (User.username == identifier)
     ).first()
 
+    # Account lockout check happens before password comparison so a locked
+    # account can't be probed indefinitely while "locked".
+    if user:
+        lockout_error = sec.check_account_lockout(user)
+        if lockout_error:
+            return jsonify({"error": lockout_error}), 423
+
     if not user or not user.check_password(password):
+        if user:
+            sec.register_failed_login(user, ip_address=sec.get_request_ip(request),
+                                       user_agent=request.headers.get("User-Agent", ""))
         return jsonify({"error": "Invalid credentials"}), 401
 
     if not user.account_active:
@@ -149,6 +166,48 @@ def login():
 
     if not user.is_verified:
         return jsonify({"error": "Email not verified", "needs_verification": True}), 403
+
+    sec.reset_failed_login(user)
+
+    login_entry = sec.record_login(user, request, successful=True)
+
+    if sec.login_requires_step_up_otp(login_entry):
+        # New device + new location (or high risk score): require OTP before
+        # issuing a token, even though the password was correct.
+        error = sec.request_high_risk_otp(user, "login_verify")
+        if error:
+            return jsonify({"error": error}), 429
+
+        from app.services.notification_service import notify
+        from app.models import NotificationEvent
+        notify(user.id, NotificationEvent.SUSPICIOUS_LOGIN, data={"ip": login_entry.ip_address})
+
+        return jsonify({
+            "message": "New device/location detected. Enter the verification code sent to your email.",
+            "needs_login_otp": True,
+            "user_id": user.id,
+        }), 200
+
+    user.last_login = datetime.utcnow()
+    db.session.commit()
+
+    token = create_access_token(identity=str(user.id))
+    return jsonify({"access_token": token, "user": user.to_dict()}), 200
+
+
+@auth_bp.route("/login/verify-otp", methods=["POST"])
+@limiter.limit("10 per minute")
+def login_verify_otp():
+    """Completes a step-up-verified login: the password was already correct,
+    this just confirms the OTP sent to email for the new device/location."""
+    data = request.get_json() or {}
+    user = User.query.get(data.get("user_id")) if data.get("user_id") else None
+    if not user:
+        return jsonify({"error": "Invalid request"}), 400
+
+    error = sec.verify_high_risk_otp(user, "login_verify", data.get("otp_code"))
+    if error:
+        return jsonify({"error": error}), 400
 
     user.last_login = datetime.utcnow()
     db.session.commit()
@@ -158,11 +217,17 @@ def login():
 
 
 @auth_bp.route("/forgot-password", methods=["POST"])
+@limiter.limit("10 per hour")
 def forgot_password():
     data = request.get_json() or {}
     user = User.query.filter_by(email=data.get("email")).first()
     if not user:
         # Don't leak whether the email exists
+        return jsonify({"message": "If that email exists, a reset code has been sent"}), 200
+
+    velocity_error = sec.check_otp_velocity(user, "password_reset")
+    if velocity_error:
+        # Still return the generic message to avoid leaking account existence/state.
         return jsonify({"message": "If that email exists, a reset code has been sent"}), 200
 
     otp_code = OTP.generate_otp()
@@ -207,8 +272,17 @@ def reset_password():
 
     otp.use()
     user.set_password(new_password)
+    user.password_changed_at = datetime.utcnow()
     db.session.commit()
-    return jsonify({"message": "Password reset successfully"}), 200
+
+    SecurityLog.record(user.id, SecurityEventType.PASSWORD_RESET, description="Password reset via OTP",
+                        ip_address=sec.get_request_ip(request))
+    db.session.commit()
+
+    sec.revoke_all_sessions(user, reason="Password reset")
+    sec.lock_withdrawals(user, reason="Password reset")
+
+    return jsonify({"message": "Password reset successfully. Please log in again."}), 200
 
 
 @auth_bp.route("/me", methods=["GET"])
